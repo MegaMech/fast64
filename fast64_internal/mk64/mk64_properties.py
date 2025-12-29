@@ -1,11 +1,11 @@
 import bpy
-from bpy.props import StringProperty, BoolProperty, EnumProperty, IntProperty, FloatProperty, PointerProperty
+from bpy.props import StringProperty, BoolProperty, EnumProperty, IntProperty, FloatProperty, PointerProperty, FloatVectorProperty
 from bpy.types import PropertyGroup, UILayout
 from bpy.utils import register_class, unregister_class
 from ..utility import prop_split
 from ..f3d.f3d_material import ootEnumDrawLayers
 
-from .mk64_constants import enum_surface_types, enum_actor_types
+from .mk64_constants import enum_surface_types, enum_clip_types, enum_draw_layer_types, enum_path_type
 
 from ..render_settings import on_update_render_settings
 
@@ -111,32 +111,30 @@ class MK64_ObjectProperties(PropertyGroup):
     obj_type: EnumProperty(
         name="Object Type",
         items=[
-            ("Course Root", "Course Root", "Course Root"),
+            ("Track Root", "Track Root", "Track Root"),
             ("Actor", "Actor", "Actor"),
         ],
     )
-    actor_type: EnumProperty(name="Actor Type", items=enum_actor_types)
 
-    # for mesh objects
-    has_col: BoolProperty(name="Has Collision", default=True)
-    col_type: EnumProperty(name="Collision Type", items=enum_surface_types, default="SURFACE_DEFAULT")
+    # For mesh objects
+    surface_type: EnumProperty(name="Collision Type", items=enum_surface_types, default="SURFACE_DEFAULT")
     section_id: IntProperty(name="section_id", default=255, min=0, max=255)
+    clip_type: EnumProperty(name="clip_type", items=enum_clip_types, default="CLIP_DEFAULT")
+    draw_layer: EnumProperty(name="draw_layer", items=enum_draw_layer_types, default="DRAW_OPAQUE")
+    location: FloatVectorProperty(name="Location", default=(0,0,0), size=3, description="location")
 
+    # If you ever need properties for actors place them here
+    # Note that HM64 Actors should be custom actors that you make
+    # and then export into the game. Placing actors in the track should be done in the game editor
+    # actor_type: EnumProperty(name="Actor Type", items=enum_actor_types)
 
-class MK64_CurveProperties(PropertyGroup):
-    """
-    Properties for curve data, linked to curve objects
-    found under curve.fast64.mk64
-    """
-
-    section_id: IntProperty(name="section_id", default=255, min=0, max=255)
-
+    # For path/curve objects
+    path_type: EnumProperty(name="Path Type", items=enum_path_type, default="TRACK_PATH_1")
 
 mk64_property_classes = (
     MK64_ImportProperties,
     MK64_ExportProperties,
     MK64_ObjectProperties,
-    MK64_CurveProperties,
     MK64_Properties,
 )
 
