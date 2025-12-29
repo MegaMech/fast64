@@ -54,7 +54,6 @@ class MK64_BpyCourse:
 
     def __init__(self, course_root: bpy.types.Object):
         self.root = course_root
-        self.log_file = os.path.join(os.path.expanduser("~"), "mk64_debug.txt")
 
     def make_mk64_course_from_bpy(self, context: bpy.Types.Context, scale: float, mat_write_method: GfxMatWriteMethod,  logging_func):
         """
@@ -72,7 +71,6 @@ class MK64_BpyCourse:
 
         # retrieve data for items and pathing
         def loop_children(obj, fModel, parent_transform):
-            logging_func({'INFO'},"LOOPING OVER OBJECTS!")
             for child in obj.children:
                 if child.type == "MESH":
                     self.export_f3d_from_obj(context, child, fModel, parent_transform @ child.matrix_local)
@@ -443,7 +441,6 @@ class MK64_Path:
         return "\n".join(lines)
     
     def to_xml(self):
-        print("PATH TO XML TEST")
         lines = []
         for x, y, z, pid in self.points:
             lines.append(f"{{ {x}, {y}, {z}, {pid} }},")
