@@ -26,7 +26,7 @@ from .fast64_internal.utility_anim import utility_anim_register, utility_anim_un
 
 from .fast64_internal.mk64.mk64_constants import mk64_world_defaults
 from .fast64_internal.mk64 import mk64_register, mk64_unregister
-from .fast64_internal.mk64.mk64_properties import MK64_ObjectProperties, MK64_CurveProperties, MK64_Properties
+from .fast64_internal.mk64.mk64_properties import MK64_ObjectProperties, MK64_Properties
 
 from .fast64_internal.f3d.f3d_material import (
     F3D_MAT_CUR_VERSION,
@@ -396,6 +396,7 @@ def set_game_defaults(scene: bpy.types.Scene, set_ucode=True):
         world_defaults = oot_world_defaults
     elif scene.gameEditorMode == "MK64":
         f3d_type = "F3DEX/LX"
+        world_defaults = mk64_world_defaults
     elif scene.gameEditorMode == "Homebrew":
         f3d_type = "F3D"
         world_defaults = {}  # This will set some pretty bad defaults, but trust the user

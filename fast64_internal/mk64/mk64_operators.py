@@ -130,11 +130,11 @@ class MK64_ExportCourse(Operator):
             selected_roots = [
                 obj for obj in selected
                 if obj.type == "EMPTY"
-                and obj.fast64.mk64.obj_type == "Course Root"
+                and obj.fast64.mk64.obj_type == "Track Root"
             ]
 
             if len(selected_roots) > 1:
-                raise PluginError("Multiple Course Roots selected.")
+                raise PluginError("Multiple Track Roots selected.")
 
             if selected_roots:
                 root = selected_roots[0]
@@ -147,18 +147,18 @@ class MK64_ExportCourse(Operator):
                         visited.add(current)
                         if (
                             current.type == "EMPTY"
-                            and current.fast64.mk64.obj_type == "Course Root"
+                            and current.fast64.mk64.obj_type == "Track Root"
                         ):
                             course_roots.add(current)
                             break
                         current = current.parent
 
                 if not course_roots:
-                    raise PluginError("No Course Root found.")
+                    raise PluginError("No Track Root found.")
 
                 if len(course_roots) > 1:
                     raise PluginError(
-                        "Multiple Course Roots found. Select one explicitly."
+                        "Multiple Track Roots found. Select one."
                     )
 
                 root = course_roots.pop()
