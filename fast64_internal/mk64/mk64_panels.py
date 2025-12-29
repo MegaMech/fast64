@@ -66,11 +66,10 @@ class MK64_ObjectPanel(MK64_Panel):
             prop_split(box, props, "obj_type", "object type")
 
     def draw_mesh_props(self, layout: UILayout, props: MK64_ObjectProperties):
-        prop_split(layout, props, "has_col", "Has Collision")
-        if props.has_col:
+            prop_split(layout, props, "surface_type", "Surface Type")
             prop_split(layout, props, "section_id", "Section ID")
-            prop_split(layout, props, "col_type", "Collision Type")
-
+            prop_split(layout, props, "clip_type", "Clip Type")
+            prop_split(layout, props, "draw_layer", "Draw Layer")
 
 class MK64_CurvePanel(MK64_Panel):
     bl_label = "MK64 Curve Inspector"
