@@ -62,8 +62,6 @@ class MK64_BpyCourse:
         also generates lists for items, pathing and collision (in future)
         """
 
-        logging_func({'INFO'}, "IS IT WORKING?!?!?!?")
-
         fModel = MK64_fModel(self.root, mat_write_method)
         # create duplicate objects to export from
         transform = Matrix.Diagonal(Vector((scale, scale, scale))).to_4x4()
