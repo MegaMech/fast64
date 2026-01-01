@@ -3,6 +3,7 @@
 # ------------------------------------------------------------------------
 from __future__ import annotations
 
+from bpy.props import FloatVectorProperty
 import bpy
 
 import os, struct, math
@@ -10,8 +11,8 @@ from pathlib import Path
 from mathutils import Vector, Euler, Matrix
 from dataclasses import dataclass, fields
 
-from .mk64_constants import MODEL_HEADER, SURFACE_TYPE_ENUM
-from .mk64_properties import MK64_ObjectProperties, MK64_CurveProperties
+from .mk64_constants import MODEL_HEADER, SURFACE_TYPE_ENUM, CLIP_TYPE_ENUM, DRAW_LAYER_ENUM, PATH_TYPE_ENUM
+from .mk64_properties import MK64_ObjectProperties
 
 from ..f3d.f3d_writer import exportF3DCommon, getInfoDict, TriangleConverterInfo, saveStaticModel
 from ..f3d.f3d_bleed import BleedGraphics
@@ -110,6 +111,7 @@ class MK64_BpyCourse:
         return
 
     def add_curve(self, obj: bpy.Types.Object, transform: Matrix, fModel: FModel):
+        mk64_props: MK64_ObjectProperties = obj.fast64.mk64
         curve_data = obj.data
 
         points = []
@@ -133,10 +135,11 @@ class MK64_BpyCourse:
                 points.append(pos_int)
 
         if points:
-            fModel.path.append(MK64_Path(points))
+            fModel.path.append(MK64_Path(points, mk64_props.path_type))
             return
 
     def add_path(self, obj: bpy.types.Object, transform: Matrix, fModel: FModel, logging_func):
+        mk64_props: MK64_ObjectProperties = obj.fast64.mk64
         depsgraph = bpy.context.evaluated_depsgraph_get()
 
         eval_obj = obj.evaluated_get(depsgraph)
@@ -145,6 +148,7 @@ class MK64_BpyCourse:
             return
 
         points = []
+
         for v in mesh.vertices:
             world_pos = transform @ eval_obj.matrix_world @ v.co
             points.append((
@@ -157,7 +161,7 @@ class MK64_BpyCourse:
         eval_obj.to_mesh_clear()
 
         if points:
-            fModel.path.append(MK64_Path(points))
+            fModel.path.append(MK64_Path(points, mk64_props.path_type))
 
     # look into speeding this up by calculating just the apprent
     # transform using transformMatrix vs clearing parent and applying
@@ -165,11 +169,22 @@ class MK64_BpyCourse:
     def export_f3d_from_obj(
         self, context: bpy.Types.Context, obj: bpy.types.Object, fModel: MK64_fModel, transformMatrix: Matrix
     ):
+        mk64_props: MK64_ObjectProperties = obj.fast64.mk64
+        mk_props: MK64_Properties = context.scene.fast64.mk64
         if obj and obj.type == "MESH":
+            # Export as geometry
             try:
                 with context.temp_override(active_object=obj, selected_objects=[obj]):
                     bpy.ops.object.parent_clear(type="CLEAR_KEEP_TRANSFORM")
-                    bpy.ops.object.transform_apply(location=True, rotation=True, scale=True, properties=False)
+                    # Treat transparent objects like a normal object which means the position is exported.
+                    # This is required for z-sort so that they are rendered over-top of each other correctly.
+                    # Normal geometry is placed at 0,0,0 and the vertices are used for positionnig instead.
+                    if mk64_props.draw_layer in {'DRAW_TRANSLUCENT', 'DRAW_TRANSLUCENT_NO_ZBUFFER'}:
+                        mk64_props.location = obj.matrix_world.to_translation() * mk_props.scale
+                        transformMatrix.translation = Vector((0.0, 0.0, 0.0))
+                        bpy.ops.object.transform_apply(location=False, rotation=True, scale=True, properties=False)
+                    else:
+                        bpy.ops.object.transform_apply(location=True, rotation=True, scale=True, properties=False)
                 infoDict = getInfoDict(obj)
                 triConverterInfo = TriangleConverterInfo(obj, None, fModel.f3d, transformMatrix, infoDict)
                 fMeshes = saveStaticModel(
@@ -206,17 +221,9 @@ class MK64_fModel(FModel):
     # parent override so I can keep track of original mesh data
     # to lookup collision data later
     def onAddMesh(self, fMesh: FMesh, obj: bpy.Types.Object):
-        if not self.has_mk64_collision(obj):
-            return
         mk64_props: MK64_ObjectProperties = obj.fast64.mk64
-        self.track_sections.append(MK64_TrackSection(fMesh.draw.name, mk64_props.col_type, 255, 0))
+        self.track_sections.append(MK64_TrackSection(fMesh.draw.name, mk64_props.surface_type, mk64_props.section_id, mk64_props.clip_type, mk64_props.draw_layer, mk64_props.location))
         return
-
-    def has_mk64_collision(self, obj: bpy.Types.Object):
-        if obj.type != "MESH":
-            return False
-        mk64_props: MK64_ObjectProperties = obj.fast64.mk64
-        return mk64_props.has_col
 
     def to_c(self, *args):
         export_data = super().to_c(*args)
@@ -311,7 +318,7 @@ class MK64_fModel(FModel):
         for i, section in enumerate(self.track_sections):
 
             sections = "\n\t".join([
-                f"<Section gfx_path=\"{internal_path}/{section.gfx_list_name}\" surface=\"{SURFACE_TYPE_ENUM[section.surface_type]}\" section=\"{section.section_id:#04x}\" flags=\"{section.flags:#04x}\" />"
+                f"<Section gfx_path=\"{internal_path}/{section.gfx_list_name}\" surface=\"{SURFACE_TYPE_ENUM[section.surface_type]}\" section=\"{section.section_id:#04x}\" flags=\"{CLIP_TYPE_ENUM[section.clip]}\" drawlayer=\"{DRAW_LAYER_ENUM[section.drawLayer]}\" x=\"{section.location[0]:.6f}\" y=\"{section.location[1]:.6f}\" z=\"{section.location[2]:.6f}\" />"
             ])
 
             lines.extend((
@@ -359,7 +366,7 @@ class MK64_fModel(FModel):
             waypoints = "\n\t\t".join([f"<Point X=\"{x}\" Y=\"{y}\" Z=\"{z}\" ID=\"{pid}\"/>" for x, y, z, pid in path.points])
 
             lines.extend((
-                f"\t<TrackWaypoint>",
+                f"\t<TrackWaypoint type=\"{PATH_TYPE_ENUM[path.path_type]}\">",
                 f"\t\t{waypoints}",
                 f"\t\t<Point X=\"-32768\" Y=\"-32768\" Z=\"-32768\" ID=\"0\"/>",
                 f"\t</TrackWaypoint>"
@@ -380,14 +387,16 @@ class MK64_TrackSection:
     gfx_list_name: str
     surface_type: str
     section_id: Int
-    flags: Int
+    clip: Int
+    drawLayer: Int
+    location: FloatVectorProperty
 
     def to_c(self):
         data = (
             self.gfx_list_name,
             self.surface_type,
             f"0x{self.section_id:X}",
-            f"0x{self.flags:X}",
+            f"0x{self.clip:X}",
         )
         return f"{{ {', '.join(data)} }}"
 
@@ -422,6 +431,7 @@ class MK64_Path:
 
     # List of {x, y, z, id},
     points: List[Tuple[int, int, int, int]]  # id is unsigned
+    path_type: Int
 
     def to_c(self):
         lines = []

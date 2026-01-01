@@ -60,16 +60,21 @@ class MK64_ObjectPanel(MK64_Panel):
         box.label(text="MK64 Object Properties")
         obj = context.object
         props = obj.fast64.mk64
-        if obj.type == "MESH":
-            self.draw_mesh_props(box, props)
-        else:
+        if obj.type == "EMPTY":
             prop_split(box, props, "obj_type", "object type")
+        elif obj.type == "MESH":
+            self.draw_mesh_props(box, props)
+        elif obj.type == "CURVE":
+            self.draw_curve_props(box, props)
 
     def draw_mesh_props(self, layout: UILayout, props: MK64_ObjectProperties):
-        prop_split(layout, props, "has_col", "Has Collision")
-        if props.has_col:
-            prop_split(layout, props, "section_id", "Section ID")
-            prop_split(layout, props, "col_type", "Collision Type")
+        prop_split(layout, props, "section_id", "Section ID")
+        prop_split(layout, props, "surface_type", "Surface")
+        prop_split(layout, props, "clip_type", "Clip")
+        prop_split(layout, props, "draw_layer", "Draw Layer")
+
+    def draw_curve_props(self, layout: UILayout, props: MK64_ObjectProperties):
+        prop_split(layout, props, "path_type", "Path Type")
 
 
 class MK64_CurvePanel(MK64_Panel):
